@@ -40,3 +40,28 @@ struct ScoreCard {
     lower_section_total: u32,
     grand_total: u32,
 }
+
+impl ScoreCard {
+    fn calculate_score(&mut self) {
+        self.upper_section_sub_total = self.ones.unwrap_or_default()
+            + self.twos.unwrap_or_default()
+            + self.threes.unwrap_or_default()
+            + self.fours.unwrap_or_default()
+            + self.fives.unwrap_or_default()
+            + self.sixes.unwrap_or_default();
+        self.upper_section_bonus = if self.upper_section_sub_total >= 63 {
+            35
+        } else {
+            0
+        };
+        self.upper_section_total = self.upper_section_sub_total + self.upper_section_bonus;
+        self.lower_section_total = self.three_of_a_kind.unwrap_or_default()
+            + self.four_of_a_kind.unwrap_or_default()
+            + self.small_straight.unwrap_or_default()
+            + self.large_straight.unwrap_or_default()
+            + self.yahtzee.unwrap_or_default()
+            + self.chance.unwrap_or_default()
+            + self.yahtzee_bonus_count * 100;
+        self.grand_total = self.upper_section_total + self.lower_section_total;
+    }
+}
