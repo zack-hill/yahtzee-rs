@@ -1,67 +1,89 @@
+mod dice;
+mod score_card;
+
+use dice::*;
+use score_card::*;
+
+use std::io;
+
 fn main() {
-    println!("Hello, world!");
-}
+    let mut card = ScoreCard::new();
+    card.calculate_score();
+    card.print();
 
-enum ScoringCategory {
-    Ones,
-    Twos,
-    Threes,
-    Fours,
-    Fives,
-    Sixes,
-    ThreeOfAKind,
-    FourOfAKind,
-    SmallStraight,
-    LargeStraight,
-    Chance,
-    Yahtzee,
-    YahtzeeBonus,
-}
-
-struct ScoreCard {
-    ones: Option<u32>,
-    twos: Option<u32>,
-    threes: Option<u32>,
-    fours: Option<u32>,
-    fives: Option<u32>,
-    sixes: Option<u32>,
-    three_of_a_kind: Option<u32>,
-    four_of_a_kind: Option<u32>,
-    small_straight: Option<u32>,
-    large_straight: Option<u32>,
-    chance: Option<u32>,
-    yahtzee: Option<u32>,
-    yahtzee_bonus_count: u32,
-
-    // Scoring
-    upper_section_sub_total: u32,
-    upper_section_bonus: u32,
-    upper_section_total: u32,
-    lower_section_total: u32,
-    grand_total: u32,
-}
-
-impl ScoreCard {
-    fn calculate_score(&mut self) {
-        self.upper_section_sub_total = self.ones.unwrap_or_default()
-            + self.twos.unwrap_or_default()
-            + self.threes.unwrap_or_default()
-            + self.fours.unwrap_or_default()
-            + self.fives.unwrap_or_default()
-            + self.sixes.unwrap_or_default();
-        self.upper_section_bonus = if self.upper_section_sub_total >= 63 {
-            35
-        } else {
-            0
-        };
-        self.upper_section_total = self.upper_section_sub_total + self.upper_section_bonus;
-        self.lower_section_total = self.three_of_a_kind.unwrap_or_default()
-            + self.four_of_a_kind.unwrap_or_default()
-            + self.small_straight.unwrap_or_default()
-            + self.large_straight.unwrap_or_default()
-            + self.yahtzee.unwrap_or_default()
-            + self.chance.unwrap_or_default()
-            + self.yahtzee_bonus_count * 100;
-        self.grand_total = self.upper_section_total + self.lower_section_total;
+    while !card.is_complete() {
+        let dice = roll();
+        println!("Choose a category:");
     }
+}
+
+fn roll() -> DieSet {
+    let mut dice = dice::roll_dice();
+    print_dice(&dice, "Dice: ");
+    reroll(&mut dice);
+    dice
+}
+
+fn reroll(dice: &mut DieSet) {
+    for reroll_num in 0..2 {
+        loop {
+            println!("Enter the dice to re-roll:");
+            let input = read_line();
+            let values: Vec<&str> = input.split(' ').collect();
+            let mut numbers: Vec<u8> = Vec::new();
+            for value in values {
+                let value = value.trim();
+                if value != "" {
+                    match value.parse() {
+                        Ok(x) => numbers.push(x),
+                        Err(_) => {
+                            println!("Error: {} is not a valid number.", value);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if numbers.len() == 0 {
+                return;
+            }
+
+            let mut rerolled = dice.clone();
+            let mut used_indices: Vec<usize> = Vec::new();
+
+            let mut success = true;
+            for number in numbers {
+                let mut value_found = false;
+                for (i, &die) in dice.iter().enumerate() {
+                    if die == number && !used_indices.contains(&i) {
+                        rerolled[i] = roll_die();
+                        used_indices.push(i);
+                        value_found = true;
+                        break;
+                    }
+                }
+                if !value_found {
+                    println!("Error: Unable to find value {} in rolled dice.", number);
+                    success = false;
+                    break;
+                }
+            }
+            if !success {
+                continue;
+            }
+            for i in 0..5 {
+                dice[i] = rerolled[i];
+            }
+            print_dice(&dice, &format!("Reroll #{}: ", reroll_num + 1));
+            break;
+        }
+    }
+}
+
+fn read_line() -> String {
+    let mut input = String::new();
+    io::stdin()
+        .read_line(&mut input)
+        .expect("Failed to read line.");
+    input
 }
