@@ -12,12 +12,20 @@ pub fn roll_dice() -> DieSet {
 
 pub fn count_dice(dice: &DieSet, num: u8) -> u32 {
     let mut count = 0;
-    for die in dice.iter() {
-        if *die == num {
+    for &die in dice.iter() {
+        if die == num {
             count += 1;
         }
     }
     count
+}
+
+pub fn sum_dice(dice: &DieSet) -> u32 {
+    let mut total = 0;
+    for &die in dice.iter() {
+        total += die as u32;
+    }
+    total
 }
 
 pub fn print_dice(dice: &DieSet, prefix: &str) {

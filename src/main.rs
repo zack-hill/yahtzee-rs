@@ -8,20 +8,35 @@ use std::io;
 
 fn main() {
     let mut card = ScoreCard::new();
-    card.calculate_score();
     card.print();
 
     while !card.is_complete() {
-        let dice = roll();
-        println!("Choose a category:");
-    }
-}
+        let mut dice = dice::roll_dice();
+        print_dice(&dice, "Dice: ");
+        reroll(&mut dice);
 
-fn roll() -> DieSet {
-    let mut dice = dice::roll_dice();
-    print_dice(&dice, "Dice: ");
-    reroll(&mut dice);
-    dice
+        let mut yahtzee_bonus_applied = false;
+        loop {
+            let category = get_category();
+            let score = ScoreCard::score_roll(&dice, category);
+
+            if card.get_score(&category).is_none() {
+                card.set_score(&category, score);
+                break;
+            } else {
+                if category == ScoringCategory::Yahtzee && score != 0 && !yahtzee_bonus_applied {
+                    card.set_score(&category, score);
+                    println!("Yahtzee bonus applied. Pick another category.");
+                    yahtzee_bonus_applied = true;
+                    continue;
+                }
+                println!("Category already filled. Pick another one.");
+            }
+        }
+        card.calculate_score();
+        card.print();
+    }
+    println!("Game Complete!")
 }
 
 fn reroll(dice: &mut DieSet) {
@@ -76,6 +91,34 @@ fn reroll(dice: &mut DieSet) {
             }
             print_dice(&dice, &format!("Reroll #{}: ", reroll_num + 1));
             break;
+        }
+    }
+}
+
+fn get_category() -> ScoringCategory {
+    loop {
+        println!("Enter the id of the category to score:");
+        let input = read_line();
+        match input.trim().parse::<u8>() {
+            Ok(x) => {
+                match x {
+                    1 => return ScoringCategory::Ones,
+                    2 => return ScoringCategory::Twos,
+                    3 => return ScoringCategory::Threes,
+                    4 => return ScoringCategory::Fours,
+                    5 => return ScoringCategory::Fives,
+                    6 => return ScoringCategory::Sixes,
+                    7 => return ScoringCategory::ThreeOfAKind,
+                    8 => return ScoringCategory::FourOfAKind,
+                    9 => return ScoringCategory::FullHouse,
+                    10 => return ScoringCategory::SmallStraight,
+                    11 => return ScoringCategory::LargeStraight,
+                    12 => return ScoringCategory::Yahtzee,
+                    13 => return ScoringCategory::Chance,
+                    _ => println!("Error: Invalid category"),
+                };
+            }
+            Err(_) => println!("Error: Invalid category"),
         }
     }
 }

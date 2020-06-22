@@ -1,6 +1,7 @@
 use crate::dice::*;
 
-enum ScoringCategory {
+#[derive(Clone, Copy, PartialEq)]
+pub enum ScoringCategory {
     Ones,
     Twos,
     Threes,
@@ -81,55 +82,31 @@ impl ScoreCard {
             && self.yahtzee.is_some()
     }
 
-    pub fn score_roll(&self, dice: &DieSet, category: ScoringCategory) -> Option<u32> {
+    pub fn score_roll(dice: &DieSet, category: ScoringCategory) -> u32 {
         match category {
-            ScoringCategory::Ones => {
-                if self.ones.is_some() {
-                    return None;
+            ScoringCategory::Ones => count_dice(dice, 1),
+            ScoringCategory::Twos => count_dice(dice, 2) * 2,
+            ScoringCategory::Threes => count_dice(dice, 3) * 3,
+            ScoringCategory::Fours => count_dice(dice, 4) * 4,
+            ScoringCategory::Fives => count_dice(dice, 5) * 5,
+            ScoringCategory::Sixes => count_dice(dice, 6) * 6,
+            ScoringCategory::ThreeOfAKind => sum_dice(dice),
+            ScoringCategory::FourOfAKind => sum_dice(dice),
+            ScoringCategory::FullHouse => 25,
+            ScoringCategory::SmallStraight => 30,
+            ScoringCategory::LargeStraight => 40,
+            ScoringCategory::Chance => sum_dice(dice),
+            ScoringCategory::Yahtzee => {
+                if count_dice(dice, dice[0]) == 5 {
+                    50
+                } else {
+                    0
                 }
-                return Some(count_dice(dice, 1));
             }
-            ScoringCategory::Twos => {
-                if self.twos.is_some() {
-                    return None;
-                }
-                return Some(count_dice(dice, 2) * 2);
-            }
-            ScoringCategory::Threes => {
-                if self.threes.is_some() {
-                    return None;
-                }
-                return Some(count_dice(dice, 3) * 3);
-            }
-            ScoringCategory::Fours => {
-                if self.fours.is_some() {
-                    return None;
-                }
-                return Some(count_dice(dice, 4) * 4);
-            }
-            ScoringCategory::Fives => {
-                if self.fives.is_some() {
-                    return None;
-                }
-                return Some(count_dice(dice, 5) * 5);
-            }
-            ScoringCategory::Sixes => {
-                if self.sixes.is_some() {
-                    return None;
-                }
-                return Some(count_dice(dice, 6) * 6);
-            }
-            ScoringCategory::ThreeOfAKind => Some(0),
-            ScoringCategory::FourOfAKind => Some(0),
-            ScoringCategory::FullHouse => Some(0),
-            ScoringCategory::SmallStraight => Some(0),
-            ScoringCategory::LargeStraight => Some(0),
-            ScoringCategory::Chance => Some(0),
-            ScoringCategory::Yahtzee => Some(0),
         }
     }
 
-    pub fn get_score(&self, category: ScoringCategory) -> Option<u32> {
+    pub fn get_score(&self, category: &ScoringCategory) -> Option<u32> {
         match category {
             ScoringCategory::Ones => self.ones,
             ScoringCategory::Twos => self.twos,
@@ -147,7 +124,7 @@ impl ScoreCard {
         }
     }
 
-    pub fn set_score(&mut self, category: ScoringCategory, value: u32) {
+    pub fn set_score(&mut self, category: &ScoringCategory, value: u32) {
         let value = Some(value);
         match category {
             ScoringCategory::Ones => self.ones = value,
@@ -162,7 +139,15 @@ impl ScoreCard {
             ScoringCategory::SmallStraight => self.small_straight = value,
             ScoringCategory::LargeStraight => self.large_straight = value,
             ScoringCategory::Chance => self.chance = value,
-            ScoringCategory::Yahtzee => self.yahtzee = value,
+            ScoringCategory::Yahtzee => {
+                if let Some(x) = self.yahtzee {
+                    if x != 0 {
+                        self.yahtzee_bonus_count += 1;
+                    }
+                } else {
+                    self.yahtzee = value;
+                }
+            }
         }
     }
 
