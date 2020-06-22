@@ -90,11 +90,44 @@ impl ScoreCard {
             ScoringCategory::Fours => count_dice(dice, 4) * 4,
             ScoringCategory::Fives => count_dice(dice, 5) * 5,
             ScoringCategory::Sixes => count_dice(dice, 6) * 6,
-            ScoringCategory::ThreeOfAKind => sum_dice(dice),
-            ScoringCategory::FourOfAKind => sum_dice(dice),
-            ScoringCategory::FullHouse => 25,
-            ScoringCategory::SmallStraight => 30,
-            ScoringCategory::LargeStraight => 40,
+            ScoringCategory::ThreeOfAKind => {
+                let (mode, count) = calc_mode(dice);
+                if count >= 3 {
+                    sum_dice(dice)
+                } else {
+                    0
+                }
+            }
+            ScoringCategory::FourOfAKind => {
+                let (mode, count) = calc_mode(dice);
+                if count >= 4 {
+                    sum_dice(dice)
+                } else {
+                    0
+                }
+            }
+            ScoringCategory::FullHouse => {
+                let occurrences = count_occurrences(dice);
+                if occurrences.len() == 2 && calc_mode(dice).1 == 3 {
+                    25
+                } else {
+                    0
+                }
+            }
+            ScoringCategory::SmallStraight => {
+                if calc_straight_length(dice) >= 4 {
+                    30
+                } else {
+                    0
+                }
+            }
+            ScoringCategory::LargeStraight => {
+                if calc_straight_length(dice) == 5 {
+                    40
+                } else {
+                    0
+                }
+            }
             ScoringCategory::Chance => sum_dice(dice),
             ScoringCategory::Yahtzee => {
                 if count_dice(dice, dice[0]) == 5 {
@@ -282,21 +315,136 @@ fn format_category(num: Option<u32>) -> String {
 #[cfg(test)]
 mod test {
     use super::*;
-
     #[test]
-    fn score_roll() {
-        // assert_eq!(true, is_player_trapped(&board_state, 1));
+    fn score_roll_ones() {
+        let dice = [1, 1, 1, 2, 4];
+        let score = ScoreCard::score_roll(&dice, ScoringCategory::Ones);
+        assert_eq!(3, score);
     }
 
     #[test]
-    fn calculate_score() {
-        // let card = ScoreCard {
-        //     ones: Some(3),
-        //     twos: Some(6),
-        //     threes: Some(6),
-        //     fours: Some(20),
-        //     fives: Some(20),
-        //     sixes: Some(12),
-        // }
+    fn score_roll_twos() {
+        let dice = [2, 1, 1, 2, 4];
+        let score = ScoreCard::score_roll(&dice, ScoringCategory::Twos);
+        assert_eq!(4, score);
+    }
+
+    #[test]
+    fn score_roll_threes() {
+        let dice = [3, 3, 3, 2, 3];
+        let score = ScoreCard::score_roll(&dice, ScoringCategory::Threes);
+        assert_eq!(12, score);
+    }
+
+    #[test]
+    fn score_roll_fours() {
+        let dice = [4, 4, 1, 2, 4];
+        let score = ScoreCard::score_roll(&dice, ScoringCategory::Fours);
+        assert_eq!(12, score);
+    }
+
+    #[test]
+    fn score_roll_fives() {
+        let dice = [1, 5, 1, 5, 5];
+        let score = ScoreCard::score_roll(&dice, ScoringCategory::Fives);
+        assert_eq!(15, score);
+    }
+
+    #[test]
+    fn score_roll_sixes() {
+        let dice = [1, 6, 1, 6, 4];
+        let score = ScoreCard::score_roll(&dice, ScoringCategory::Sixes);
+        assert_eq!(12, score);
+    }
+
+    #[test]
+    fn score_roll_three_of_a_kind_valid() {
+        let dice = [1, 1, 1, 2, 4];
+        let score = ScoreCard::score_roll(&dice, ScoringCategory::ThreeOfAKind);
+        assert_eq!(9, score);
+    }
+
+    #[test]
+    fn score_roll_three_of_a_kind_invalid() {
+        let dice = [1, 3, 1, 2, 4];
+        let score = ScoreCard::score_roll(&dice, ScoringCategory::ThreeOfAKind);
+        assert_eq!(0, score);
+    }
+
+    #[test]
+    fn score_roll_four_of_a_kind_valid() {
+        let dice = [1, 1, 1, 1, 4];
+        let score = ScoreCard::score_roll(&dice, ScoringCategory::FourOfAKind);
+        assert_eq!(8, score);
+    }
+
+    #[test]
+    fn score_roll_four_of_a_kind_invalid() {
+        let dice = [1, 2, 1, 1, 4];
+        let score = ScoreCard::score_roll(&dice, ScoringCategory::FourOfAKind);
+        assert_eq!(0, score);
+    }
+
+    #[test]
+    fn score_roll_full_house_valid() {
+        let dice = [1, 1, 1, 2, 2];
+        let score = ScoreCard::score_roll(&dice, ScoringCategory::FullHouse);
+        assert_eq!(25, score);
+    }
+
+    #[test]
+    fn score_roll_full_house_invalid() {
+        let dice = [1, 1, 4, 2, 2];
+        let score = ScoreCard::score_roll(&dice, ScoringCategory::FullHouse);
+        assert_eq!(0, score);
+    }
+
+    #[test]
+    fn score_roll_small_straight_valid() {
+        let dice = [3, 1, 4, 2, 3];
+        let score = ScoreCard::score_roll(&dice, ScoringCategory::SmallStraight);
+        assert_eq!(30, score);
+    }
+
+    #[test]
+    fn score_roll_small_straight_invalid() {
+        let dice = [3, 1, 5, 2, 6];
+        let score = ScoreCard::score_roll(&dice, ScoringCategory::SmallStraight);
+        assert_eq!(0, score);
+    }
+
+    #[test]
+    fn score_roll_large_straight_valid() {
+        let dice = [3, 2, 4, 1, 5];
+        let score = ScoreCard::score_roll(&dice, ScoringCategory::LargeStraight);
+        assert_eq!(40, score);
+    }
+
+    #[test]
+    fn score_roll_large_straight_invalid() {
+        let dice = [3, 1, 4, 2, 6];
+        let score = ScoreCard::score_roll(&dice, ScoringCategory::LargeStraight);
+        assert_eq!(0, score);
+    }
+
+    #[test]
+    fn score_roll_yahtzee_valid() {
+        let dice = [3, 3, 3, 3, 3];
+        let score = ScoreCard::score_roll(&dice, ScoringCategory::Yahtzee);
+        assert_eq!(50, score);
+    }
+
+    #[test]
+    fn score_roll_yahtzee_invalid() {
+        let dice = [3, 3, 1, 3, 3];
+        let score = ScoreCard::score_roll(&dice, ScoringCategory::Yahtzee);
+        assert_eq!(0, score);
+    }
+
+    #[test]
+    fn score_roll_chance() {
+        let dice = [1, 1, 4, 2, 2];
+        let score = ScoreCard::score_roll(&dice, ScoringCategory::Chance);
+        assert_eq!(10, score);
     }
 }

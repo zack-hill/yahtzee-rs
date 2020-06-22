@@ -59,10 +59,11 @@ fn reroll(dice: &mut DieSet) {
                 }
             }
 
-            if numbers.len() == 0 {
+            if numbers.is_empty() {
                 return;
             }
 
+            // Make a copy of the starting dice
             let mut rerolled = dice.clone();
             let mut used_indices: Vec<usize> = Vec::new();
 
@@ -86,9 +87,8 @@ fn reroll(dice: &mut DieSet) {
             if !success {
                 continue;
             }
-            for i in 0..5 {
-                dice[i] = rerolled[i];
-            }
+            // Copy the rerolled dice back over the starting dice
+            dice[..].clone_from_slice(&rerolled[..]);
             print_dice(&dice, &format!("Reroll #{}: ", reroll_num + 1));
             break;
         }
